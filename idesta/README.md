@@ -14,6 +14,7 @@ likely candidates from those. However, there are a few steps that need to be don
 post processing of results from ClusPro. 
 
 ##Workflow of project #1
+0. loadData.py loads all 5 data sets from the 3 data portals: RSCB PDB, Weng Lab at Umass, and datamechanics.io
 1. Obtain the well accepted complex benchmark set from Zhiping's lab website. This benchmark set contains 230 complexes of different type. The 
 information obtained also includes the category of the complex, the chains for the receptor and the ligand, the change area of interface (ASA), 
 and the interface root mean square distance between bound and unbound complexes (iRMSD). # clusterBM5.py 
