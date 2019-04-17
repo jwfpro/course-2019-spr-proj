@@ -30,3 +30,18 @@ ft file mentioned in (4). For this file, I count the number of members in each c
 6. Finally, after docking, we need to check if our simulation is correct or not. For that, one way is to check the bound 1AHW. Another way is to
 see how homologous complexes interact. So, for that I pulled proteins with similar sequences from the protein data bank and selected for similar
 complexes. # findHomologs.py
+
+-----------------------------------------------------------------Project #2-------------------------------------------------------
+# Reminder: ClusPro is a software used in our lab that predicts how two proteins interact. It spits out thousands of predictions which may or maynot be accurate.
+
+# Motivation: In project 1, I utilized relational building blocks to pre-process protein submissions to ClusPro and analyze the ClusPro outputs like energy, cluster member counts. In our lab, we use an evaluative program called DockQ that scores how good ClusPro's predictions are. In this project, I try to understand what exactly this DockQ score is in the hope to learn what important features are there to improve on ClusPro's prediction accuracies. 
+
+# Aim 1: the DockQ program gives four different scores for a single prediction from ClusPro: fnat, irms, Lrms and dockQ. fnat, irms and Lrms are somehow manipulated to obtain the final dockQ score which is used to tell how accurate the prediction is. In the first part, I try to find the scaling factors for irms and Lrms that enables us to obtain dockQ from fnat, irms and Lrms by framing the problem as a constaint satisfaction problem.  The most important constraint is {realDockQ - 0.05 <= (f + ((1 + (ir/i)**2)**(-1)) + ((1 + (lr/j)**2)**(-1)))/3 realDockQ + 0.05} where f is fnat, ir is irms, lr is lrms while i and j are the scaling factors for the latter two.
+
+# Aim 2: The second goal is to find which of the three fundamental scores are the most important for better dockQ scores. To that end, I will be calculating the correlation coefficients and the corresponding p-values of fnat with dockQ, irmsd with dockQ, and Lrmsd with DockQ. Only the p-values are deposited in the repo as that tells all. 
+
+Workflow:
+0. loadData2.py: loads the evaluation results from DockQ program that has the fnat, irmsd, lrmsd, and dockq scores of each of ClusPro's predictions. Then it uses relational building blocks to filter only the 4 scores and the identifying keys (proteinName, predictionRank, energyRank and coefficientNumber). 
+1. optimizeStats.py: retrieves the filtered dockq dataset from repo and computes the following things:
+	1.a. Finds the scaling factors of irmsd and lrmsd that yields the dockQ score that satisfy the constraint outlined above in [Aim1] for all 96000+ predictions
+	1.b. Finds the p-value for the correlation coefficients of each of the 4 scores with eachother. 

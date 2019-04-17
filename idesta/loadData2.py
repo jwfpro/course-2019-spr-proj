@@ -31,10 +31,10 @@ class loadData2(dml.Algorithm):
         url = 'http://datamechanics.io/data/idesta/newpip_oldgrp_iter1_4eigs_dockqres'
         response = urllib.request.urlopen(url).read().decode("utf-8")
         scorelist = response.strip().split('\n')
+        #pdb.set_trace()
         
         coll = []
-        res = results.read().splitlines()
-        for line in res:
+        for line in scorelist:
             if line.startswith("JOBNUM"):
                 continue
             else:
@@ -62,21 +62,16 @@ class loadData2(dml.Algorithm):
             document describing that invocation event.
         '''
 
-        # Set up the database connection.
-        client = dml.pymongo.MongoClient()
-        repo = client.repo
-        repo.authenticate('idesta', 'idesta')
-        doc.add_namespace('alg', 'http://datamechanics.io/algorithm/') # The scripts are in <folder>#<filename> format.
-        doc.add_namespace('dat', 'http://datamechanics.io/data/') # The data sets are in <user>#<collection> format.
+        doc.add_namespace('alg', 'http://datamechanics.io/algorithm/') 
+        doc.add_namespace('dat', 'http://datamechanics.io/data/')
         doc.add_namespace('ont', 'http://datamechanics.io/ontology#') # 'Extension', 'DataResource', 'DataSet', 'Retrieval', 'Query', or 'Computation'.
-        doc.add_namespace('log', 'http://datamechanics.io/log/') # The event log.
-
+        doc.add_namespace('log', 'http://datamechanics.io/log/')
         doc.add_namespace('dtm', 'http://datamechanics.io/data/')
 
         this_script = doc.agent('alg:idesta#loadData_2', {prov.model.PROV_TYPE:prov.model.PROV['SoftwareAgent'], 'ont:Extension':'py'})
         
-        resource_dtm = doc.entity('dtm:idesta', {'prov:label':'the 4 evaluation scores for each ClusPro prediction', prov.model.PROV_TYPE:'ont:DataResource', 'ont:Extension':'txt'})
-        get_dockq = doc.activity('log:uuid'+str(uuid.uuid4()), startTime, endTime, {'prov:label':'get the necessary data from dockq result file'})
+        resource_dtm = doc.entity('dtm:idesta', {'prov:label':'DockQ program output: evaluation scores', prov.model.PROV_TYPE:'ont:DataResource', 'ont:Extension':'txt'})
+        get_dockq = doc.activity('log:uuid'+str(uuid.uuid4()), startTime, endTime, {'prov:label':'get the 4 eval scores from dockq result file'})
         doc.wasAssociatedWith(get_dockq, this_script)
         
         doc.usage(get_dockq, resource_dtm, startTime, None,
@@ -89,19 +84,17 @@ class loadData2(dml.Algorithm):
         dockq = doc.entity('dat:idesta#dockq_res', {prov.model.PROV_LABEL:'evaluation scores of antibody-antigen compelxes', prov.model.PROV_TYPE:'ont:DataSet'})
         doc.wasAttributedTo(dockq, this_script)
         doc.wasGeneratedBy(dockq, get_dockq, endTime)
-        doc.wasDerivedFrom(dockq, resource_dtm, get_dockq, get_dockq, get_dockq)
-
-        repo.logout()
+        doc.wasDerivedFrom(resource_dtm, dockq, get_dockq, get_dockq, get_dockq)
                   
         return doc
 
-
+'''
 # This is example code you might use for debugging this module.
 # Please remove all top-level function calls before submitting.
 loadData2.execute()
 doc = loadData2.provenance()
 print(doc.get_provn())
 print(json.dumps(json.loads(doc.serialize()), indent=4))
-
+'''
 
 ## eof

@@ -10,10 +10,10 @@ import uuid
 import numpy as np
 from z3 import *
 
-class optimizeStats(dml.Algorithm):
+class constStats(dml.Algorithm):
     contributor = 'idesta'
     reads = ['idesta.dockq_res']
-    writes = ['idesta.dockq_optstats']
+    writes = ['idesta.dockq_constats']
 
     # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
     # --------------------------------------------------------------------------Relational building blocks ---------------------------------------------------------------------#
@@ -43,7 +43,7 @@ class optimizeStats(dml.Algorithm):
 
     def corr(x,y):
         if np.std(x) * np.std(y) != 0:
-            return optimizeStats.cov(x,y)/(np.std(x) * np.std(y))
+            return constStats.cov(x,y)/(np.std(x) * np.std(y))
 
     def optimizeIJ(entries):
         fs = [i['vs'][0] for i in entries]
@@ -70,27 +70,31 @@ class optimizeStats(dml.Algorithm):
         else:
             return S.model()
 
-    def pval_scores(entries):
+    def pval_scores(entries, trial):
         fs = [i['vs'][0] for i in entries]
         irs = [i['vs'][1] for i in entries]
         lrs = [i['vs'][2] for i in entries]
         ds = [i['vs'][3] for i in entries]
 
         scores_names = ['fnat', 'irmsd', 'lrmsd', 'dockq']
-        all_names_prod = optimizeStats.product(scores_names, scores_names)
-        names_prod = optimizeStats.select(all_names_prod, lambda t: t[0] != t[1])
+        all_names_prod = constStats.product(scores_names, scores_names)
+        names_prod = constStats.select(all_names_prod, lambda t: t[0] != t[1])
         scores_tup = (fs, irs, lrs, ds)
-        scores_prod = optimizeStats.product(scores_tup, scores_tup)
+        scores_prod = constStats.product(scores_tup, scores_tup)
         index, pvals = -1, {}
         for i in scores_prod:
             if i[0] != i[1]:
                 index += 1
                 corr_name = "_".join(names_prod[index])
-                c0 = optimizeStats.corr(i[0], i[1])
+                c0 = constStats.corr(i[0], i[1])
                 corrs = []
-                for k in range(2000):
-                    y_permuted = optimizeStats.permute(i[1])
-                    corrs.append(optimizeStats.corr(i[0], y_permuted))
+                if trial:
+                    NUM = 50
+                else:
+                    NUM = 2000
+                for k in range(NUM):
+                    y_permuted = constStats.permute(i[1])
+                    corrs.append(constStats.corr(i[0], y_permuted))
                 pval = len([c for c in corrs if abs(c) >= abs(c0)])/len(corrs)
                 pvals[corr_name] = pval
 
@@ -104,7 +108,7 @@ class optimizeStats(dml.Algorithm):
     # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
     # --------------------------------------------------------------------------Retrive data from MONGODB ----------------------------------------------------------------------#
     # retrieve data sets from local MONGODB
-    def execute(trial = False): ## HERE WE SHOULD NOT PUT TRIAL RIGHT? SINCE THIS FUNCTION SHOULD IN EITHER CASE
+    def execute(trial=False):
         '''Retrieve some data sets from Mongo for transformation'''
         startTime = datetime.datetime.now()
 
@@ -115,17 +119,18 @@ class optimizeStats(dml.Algorithm):
 
         abag_dockq = [i for i in repo['idesta.dockq_res'].find()]
         if trial:
-            model = optimizeStats.optimizeIJ(abag_dockq[:100])
-            stats = optimizeStats.pval_scores(abag_dockq[:100])
+            model = constStats.optimizeIJ(abag_dockq[:300])
+            stats = constStats.pval_scores(abag_dockq[:300], trial)
+            #pdb.set_trace()
         else:
-            model = optimizeStats.optimizeIJ(abag_dockq)
-            stats = optimizeStats.pval_scores(abag_dockq)
+            model = constStats.optimizeIJ(abag_dockq)
+            stats = constStats.pval_scores(abag_dockq, trial)
 
         #pdb.set_trace()
-        model_dict = model_dict = {'model': model}
-        repo.dropPermanent('opt_dockq')
-        repo.createPermanent('opt_dockq')
-        repo['idesta.opt_dockq'].insert_many([model_dict, stats])
+        model_dict = {'i': str(model).split(",")[0].split("= ")[1], 'j': str(model).split(",")[1].split("= ")[1].strip("]")}
+        repo.dropPermanent('dockq_constats')
+        repo.createPermanent('dockq_constats')
+        repo['idesta.dockq_constats'].insert_many([model_dict, stats])
 
         repo.logout()
 
@@ -141,44 +146,44 @@ class optimizeStats(dml.Algorithm):
             document describing that invocation event.
         '''
 
-        # Set up the database connection.
-        client = dml.pymongo.MongoClient()
-        repo = client.repo
-        repo.authenticate('idesta', 'idesta')
-        doc.add_namespace('alg', 'http://datamechanics.io/algorithm/') # The scripts are in <folder>#<filename> format.
-        doc.add_namespace('dat', 'http://datamechanics.io/data/') # The data sets are in <user>#<collection> format.
+        doc.add_namespace('alg', 'http://datamechanics.io/algorithm/') 
+        doc.add_namespace('dat', 'http://datamechanics.io/data/') 
         doc.add_namespace('ont', 'http://datamechanics.io/ontology#') # 'Extension', 'DataResource', 'DataSet', 'Retrieval', 'Query', or 'Computation'.
-        doc.add_namespace('log', 'http://datamechanics.io/log/') # The event log.
+        doc.add_namespace('log', 'http://datamechanics.io/log/') 
 
 
-        this_script = doc.agent('alg:idesta#optimizeStats', {prov.model.PROV_TYPE:prov.model.PROV['SoftwareAgent'], 'ont:Extension':'py'})
+        this_script = doc.agent('alg:idesta#constStats', {prov.model.PROV_TYPE:prov.model.PROV['SoftwareAgent'], 'ont:Extension':'py'})
         
-        clus = doc.entity('dat:idesta#', {prov.model.PROV_LABEL:'cluster file for 1AHW', prov.model.PROV_TYPE:'ont:DataSet'})
-        get_clus = doc.activity('log:uuid'+str(uuid.uuid4()), startTime, endTime, {'prov:label':'get the cluster file for 1AHW'})
-        doc.wasAssociatedWith(get_clus, this_script)
-        doc.used(get_clus, clus, startTime)
-        doc.wasAttributedTo(clus, this_script)
-        doc.wasGeneratedBy(clus, get_clus, endTime)
+        dockq = doc.entity('dat:idesta#dockq_res', {prov.model.PROV_LABEL:'evaluation results file of all proteins', prov.model.PROV_TYPE:'ont:DataSet'})
+        get_dockqres = doc.activity('log:uuid'+str(uuid.uuid4()), startTime, endTime, {'prov:label':'obtain the dockq res data from repo'})
+        doc.wasAssociatedWith(get_dockqres, this_script)
+        #doc.used(get_dockqres, dockq, startTime)
+        doc.usage(get_dockqres, dockq, startTime, None,
+                  {prov.model.PROV_TYPE:'ont:Retrieval'
+                  }
+                  )
         
 
-        cluscount = doc.entity('dat:idesta#1ahw_clus_count', {prov.model.PROV_LABEL:'count of cluster members for 1AHW docking', prov.model.PROV_TYPE:'ont:DataSet'})
-        get_cluscount = doc.activity('log:uuid'+str(uuid.uuid4()), startTime, endTime, {'prov:label':'count members of each cluster'})
-        doc.wasAssociatedWith(get_cluscount, this_script)
-        doc.used(get_cluscount, cluscount, startTime)
-        doc.wasAttributedTo(cluscount, this_script)
-        doc.wasGeneratedBy(cluscount, get_cluscount, endTime)
-        doc.wasDerivedFrom(cluscount, clus, get_cluscount, get_cluscount, get_cluscount)
+        constats = doc.entity('dat:idesta#dockq_constats', {prov.model.PROV_LABEL:'i and j vars satisfying the constraint and corr_coefs of fnat, irms and lrms with dockq', prov.model.PROV_TYPE:'ont:DataSet'})
+        get_constats = doc.activity('log:uuid'+str(uuid.uuid4()), startTime, endTime, {'prov:label':'get vals that sat the constraints and corr_coefs of fnat, irms, lrms with dockq'})
+        doc.wasAssociatedWith(get_constats, this_script)
+        #doc.used(get_constats, constats, startTime)
+        doc.usage(get_constats, constats, startTime, None,
+                  {prov.model.PROV_TYPE:'ont:Computation'
+                  }
+                  )
+        doc.wasAttributedTo(constats, this_script)
+        doc.wasGeneratedBy(constats, get_constats, endTime)
+        doc.wasDerivedFrom(dockq, constats, get_constats, get_constats, get_constats)
  
-        #repo.record(doc.serialize())
-        repo.logout()
                   
         return doc
 
 '''
 # This is example code you might use for debugging this module.
 # Please remove all top-level function calls before submitting.
-countClusterMembers.execute()
-doc = countClusterMembers.provenance()
+constStats.execute()
+doc = constStats.provenance()
 print(doc.get_provn())
 print(json.dumps(json.loads(doc.serialize()), indent=4))
 '''
