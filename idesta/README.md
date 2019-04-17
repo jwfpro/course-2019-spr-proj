@@ -46,6 +46,6 @@ The second goal is to find which of the three fundamental scores are the most im
 
 # Workflow:
 0. loadData2.py: loads the evaluation results from DockQ program that has the fnat, irmsd, lrmsd, and dockq scores of each of ClusPro's predictions. Then it uses relational building blocks to filter only the 4 scores and the identifying keys (proteinName, predictionRank, energyRank and coefficientNumber). 
-1. optimizeStats.py: retrieves the filtered dockq dataset from repo and computes the following things:
+1. constStats.py: retrieves the filtered dockq dataset from repo and computes the following things:
 	1.a. Finds the scaling factors of irmsd and lrmsd that yields the dockQ score that satisfy the constraint outlined above in [Aim1] for all 96000+ predictions
 	1.b. Finds the p-value for the correlation coefficients of each of the 4 scores with eachother. 
