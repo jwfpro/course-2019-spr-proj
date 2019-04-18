@@ -1,18 +1,5 @@
-Narrative and Justification:
+Project #2 Narrative and Justification
 
-In this project we incorporated United States Partisan Map data on republican and democrat belief in global warming by state, 
-along with U.S. census data for population by state, state energy-related CO2 emissions both adjusted and unadjusted and
-carbon intensity by state. The purpose of gathering these datasets was to help determine if there is a correlation between
-belief in global warming and CO2 emissions per capita. We also wanted to determine if states with higher global warming belief
-rates had a higher carbon efficiency rate. Ultimately, we want to see if increased acceptance of global warming has an impact
-on how the states of the U.S. handle CO2-related processes. The CO2 emissions paired with the population data allow us to
-calculate an estimate for CO2 emissions per capita for each state. Using the carbon intensity data we are able to calculate
-carbon efficacy, and we can pair this with the partisan map data to be able to view the efficacy relative to the republican
-and democrat belief rate by state.  
+In terms of statistical analysis, we decided to find the correlation coefficient between carbon efficacy and emissions per capita to see if there is an inverse correlation between the two. On average, when looking at data for all 50 states, we expect that a higher carbon efficacy, whether it be due to government regulations or some technological advancements, will lead to a lower emissions per capita. After finding the correlation coefficient, we confirmed that our hypothesis was correct.
 
-Data ideosyncracies.
-
-All but one of the data sets are free, available online, and have no authorization requirements.  We needed to subscribe to a
-Yale mailing list at http://climatecommunication.yale.edu/visualizations-data/partisan-maps-2018/
-?est=happening&group=dem&type=value&geo=cd to download the Partisan Map data, but didn’t need to provide that authorization in
-our script.
+In terms of constraint satisfaction or optimization, we chose to use the k-means algorithm in order to, for each issue, find the distance between the k for those who agree and for those who disagree, aggregated from both democrats and republicans in all 50 states. We chose k = 2 for our implementation under the assumption that democrats and republicans will on average have strongly opposing views on climate change. We use these resulting distances as the optimization factor to determine which set of opinions have the least disagreement between republicans and democrats. The lower the k-means distance, the less contentious the issue is between the two parties.
